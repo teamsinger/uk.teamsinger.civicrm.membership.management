@@ -23,7 +23,7 @@ function _civicrm_api3_waiting_list_InviteMembers_spec(&$spec) {
  */
 function civicrm_api3_waiting_list_InviteMembers($params) {
   $waiting_list_group = 9;
-  $maximum_membership_count = 675;
+  $maximum_membership_count = 600;
   $invited_members = 0;
   $date = date('Y-m-d H:i:s');
   $mailing_name = 'Waiting List Invitation ' . $date;
@@ -52,10 +52,11 @@ function civicrm_api3_waiting_list_InviteMembers($params) {
   $params['version'] = 3;
   $params['sequential'] = 1;
   $params['status_id'] = array('IN' => array(1, 2, 8));
+  $params['membership_type_id'] = array('IN' => array(1, 3, 8, 9, 10, 11));
+  $params['owner_membership_id'] = array('IS NULL' => 1);
 
   if ($api->Membership->Getcount($params)) {
     $current_membership_count = $api->lastResult;
- var_dump($current_membership_count);
   } else {
     throw new API_Exception("Error retrieving current membership count " . print_r($api->errorMsg(), true));
   } 
@@ -76,7 +77,7 @@ function civicrm_api3_waiting_list_InviteMembers($params) {
           break;
         }
 
-        waiting_list_move_contact($mailing_group_id, $waiting_list[$i]->id, $waiting_list[$i]->contact_id);
+        waiting_list_move_contact($mailing_group_id, $waiting_list[$i]->id, $waiting_list[$i]->contact_id, $waiting_list_group);
 
         $current_membership_count++;
         $invited_members++;
@@ -92,7 +93,8 @@ function civicrm_api3_waiting_list_InviteMembers($params) {
   return civicrm_api3_create_success($returnValues, $params, 'WaitingList', 'InviteMembers');
 }
 
-function waiting_list_move_contact($mailing_group_id, $group_contact_id, $contact_id) {
+function waiting_list_move_contact($mailing_group_id, $group_contact_id, $contact_id, $waiting_list_group) {
+  $group_contact_id_result = null;
   $waiting_list_api = new civicrm_api3();
 
   $waiting_list_params = array();
@@ -105,7 +107,36 @@ function waiting_list_move_contact($mailing_group_id, $group_contact_id, $contac
     throw new API_Exception("Error moving Contact to group " . $mailing_group_id . " using group_contact.id " . $group_contact_id . print_r($waiting_list_api->errorMsg(), true));
   }
 
-  // @todo add delete
+  unset($waiting_list_mailing_params);
+
+  $waiting_list_params['version'] = 3;
+  $waiting_list_params['contact_id'] = $contact_id;
+  $waiting_list_params['group_id'] = $waiting_list_group;
+
+  if ($waiting_list_api->GroupContact->Get($waiting_list_params)) {
+    $group_contact_id_results = $waiting_list_api->lastResult->values;
+
+    foreach ($group_contact_id_results AS $group_contact_id_result) {
+      if ($group_contact_id_result->group_id == 9) {
+        $group_contact_id = $group_contact_id_result->id;
+      }
+    }
+  } else {
+    throw new API_Exception("Error retrieving group contact id for contact_id " . $group_contact_id . print_r($waiting_list_api->errorMsg(), true));
+  } 
+
+  if (is_null($group_contact_id)) {
+    throw new API_Exception("Error retrieving group contact id for contact_id " . $group_contact_id . print_r($waiting_list_api->errorMsg(), true));
+  }
+
+  unset($waiting_list_mailing_params);
+
+  $waiting_list_params['version'] = 3;
+  $waiting_list_params['id'] = $group_contact_id;
+
+  if (!$waiting_list_api->GroupContact->Delete($waiting_list_params)) {
+    throw new API_Exception("Error removing " . $contact_id . " from " . $waiting_list_group . print_r($waiting_list_api->errorMsg(), true));
+  }
 }
 
 function waiting_list_create_mailing($mailing_group_id, $mailing_name, $msg_template_id, $date) {
@@ -125,11 +156,8 @@ function waiting_list_create_mailing($mailing_group_id, $mailing_name, $msg_temp
 
   $waiting_list_mailing_params['version']            = 3;
   $waiting_list_mailing_params['created_id']         = 237;
-  $waiting_list_mailing_params['created_date']       = $date;
   $waiting_list_mailing_params['scheduled_id']       = 237;
-  $waiting_list_mailing_params['scheduled_date']     = $date;
   $waiting_list_mailing_params['approver_id']        = 237;
-  $waiting_list_mailing_params['approval_date']      = $date;
   $waiting_list_mailing_params['approval_status_id'] = 1;
   $waiting_list_mailing_params['subject']            = $message_template->msg_subject;
   $waiting_list_mailing_params['name']               = $mailing_name;
