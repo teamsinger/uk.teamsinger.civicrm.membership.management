@@ -163,9 +163,7 @@ function waiting_list_create_mailing($mailing_group_id, $mailing_name, $msg_temp
   $waiting_list_mailing_params['name']               = $mailing_name;
   $waiting_list_mailing_params['body_html']          = $message_template->msg_html;
   $waiting_list_mailing_params['body_text']          = $message_template->msg_text;
-  $waiting_list_mailing_params['groups']             = array( 'include' => array(13), 'exclude' => array() );
-  // @todo enable correct list 
-//  $waiting_list_mailing_params['groups']             = array( 'include' => array($mailing_group_id), 'exclude' => array() );
+  $waiting_list_mailing_params['groups']             = array( 'include' => array($mailing_group_id), 'exclude' => array() );
   $waiting_list_mailing_params['reply_id']           = 8;
   $waiting_list_mailing_params['unsubscribe_id']     = 5;
   $waiting_list_mailing_params['optout_id']          = 7;
