@@ -28,6 +28,8 @@ function civicrm_api3_waiting_list_InviteMembers($params) {
   $date = date('Y-m-d H:i:s');
   $mailing_name = 'Waiting List Invitation ' . $date;
   $msg_template_id = 74;
+  $sms_template_id = 79;
+  $sms_provider_id = 1;
 
   require_once 'api/class.api.php';
 
@@ -83,6 +85,7 @@ function civicrm_api3_waiting_list_InviteMembers($params) {
         $invited_members++;
       }
       waiting_list_create_mailing($mailing_group_id, $mailing_name, $msg_template_id, $date);
+      waiting_list_create_sms($mailing_group_id, $mailing_name, $sms_template_id, $sms_provider_id, $date);
     }
   } else {
     throw new API_Exception("Error retrieving Waiting List " . print_r($api->errorMsg(), true));
@@ -174,5 +177,41 @@ function waiting_list_create_mailing($mailing_group_id, $mailing_name, $msg_temp
 
   if (!$waiting_list_mailing_api->Mailing->Create($waiting_list_mailing_params)) {
     throw new API_Exception("Error creating mailing " . print_r($waiting_list_mailing_api->errorMsg(), true));
+  }
+}
+
+function waiting_list_create_sms($mailing_group_id, $mailing_name, $sms_template_id, $sms_provider_id, $date) {
+  $waiting_list_sms_api = new civicrm_api3();
+
+  $waiting_list_sms_params = array();
+  $waiting_list_sms_params['version'] = 3;
+  $waiting_list_sms_params['sequential'] = 1;
+  $waiting_list_sms_params['group_id'] = $mailing_group_id;
+  $waiting_list_sms_params['options'] = array('sort' => 'id', 'limit' => 0);
+
+  if ($waiting_list_sms_api->GroupContact->Get($waiting_list_sms_params)) {
+    $waiting_list = $waiting_list_sms_api->lastResult->values;
+
+    $count = $waiting_list_sms_api->lastResult->count;
+
+    for ($i=0; $i<$count; $i++) {
+      try {
+        unset($waiting_list_sms_params);
+
+        $waiting_list_sms_params['version']     = 3;
+        $waiting_list_sms_params['contact_id']  = $waiting_list[$i]->contact_id;
+        $waiting_list_sms_params['template_id'] = $sms_template_id;
+        $waiting_list_sms_params['provider_id'] = $sms_provider_id;
+
+        if (!$waiting_list_sms_api->Sms->Send($waiting_list_sms_params)) {
+          print "Error creating sms ";
+          print_r($waiting_list_sms_api->errorMsg());
+        }
+      } catch (API_Exception $apie) {
+        print "Caught exception: " .  $apie->getMessage() . "\n";
+      }
+    }
+  } else {
+    throw new API_Exception("Error retrieving SMS group contacts " . print_r($waiting_list_sms_api->errorMsg(), true));
   }
 }
