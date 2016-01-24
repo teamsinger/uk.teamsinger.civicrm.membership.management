@@ -1,0 +1,17 @@
+{
+    "name": "teamsinger/uk.teamsinger.civicrm.membership.management",
+    "type": "civicrm-extension",
+    "license": "MIT",
+    "description": "Simple membership management for CiviCRM",
+    "homepage": "https://github.com/teamsinger/uk.teamsinger.civicrm.membership.management",
+    "authors": [
+        {
+            "name": "Tom Singer",
+            "email": "tomsinger@gmail.com",
+            "homepage": "https://github.com/tomsinger"
+        }
+    ],
+    "require": {
+        "composer/installers": "dev-civicrm"
+    }
+}
